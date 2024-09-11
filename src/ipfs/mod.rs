@@ -1,11 +1,12 @@
-use libp2p::{gossipsub, mdns, swarm::NetworkBehaviour, swarm::SwarmEvent, tcp, yamux};
+use crate::error::{self, Result};
+use futures::StreamExt;
+use libp2p::{core::multiaddr::Multiaddr, identify, noise, swarm::SwarmEvent, tcp, yamux};
+use std::{error::Error, time::Duration};
+use tracing_subscriber::EnvFilter;
 
-#[derive(NetworkBehaviour)]
-struct P2pBehaviour {
-    gossipsub: gossipsub::Behaviour,
-}
+const PROTOCOL_VERSION: &str = "/ipfs/id/1.0.0";
 
-pub fn connect_swam() {
+async fn p2p_swam(remote_peer_addr: &str) -> Result<()> {
     let mut swarm = libp2p::SwarmBuilder::with_new_identity()
         .with_tokio()
         .with_tcp(
@@ -13,37 +14,34 @@ pub fn connect_swam() {
             noise::Config::new,
             yamux::Config::default,
         )?
-        .with_quic()
         .with_behaviour(|key| {
-            let message_id_fn = |message: &gossipsub::Message| {
-                let mut s = DefaultHasher::new();
-                message.data.hash(&mut s);
-                gossipsub::MessageId::from(s.finish().to_string())
-            };
-
-            // Set a custom gossipsub configuration
-            let gossipsub_config = gossipsub::ConfigBuilder::default()
-                .heartbeat_interval(Duration::from_secs(10)) /
-                .validation_mode(gossipsub::ValidationMode::Strict) // This sets the ki
-                .message_id_fn(message_id_fn) 
-                .build()
-                .map_err(|msg| io::Error::new(io::ErrorKind::Other, msg))?; 
-
-            // build a gossipsub network behaviour
-            let gossipsub = gossipsub::Behaviour::new(
-                gossipsub::MessageAuthenticity::Signed(key.clone()),
-                gossipsub_config,
-            )?;
-
-            let mdns =
-                mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id())?;
-            Ok(MyBehaviour { gossipsub, mdns })
+            identify::Behaviour::new(identify::Config::new(PROTOCOL_VERSION.into(), key.public()))
         })?
         .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(60)))
         .build();
 
-    // Create a Gossipsub topic
-    let topic = gossipsub::IdentTopic::new("irfs-redis-broadcast");
-    // subscribes to our topic
-    swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
+    // Tell the swarm to listen on all interfaces and a random, OS-assigned
+    // port.
+    swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse().unwrap())?;
+
+    let remote: Multiaddr = remote_peer_addr
+        .parse()
+        .map_err(|_| error::Error::ArgsMissing("Invalid address".to_string()))?;
+    tracing::debug!("Connecting to peer at {remote}");
+    swarm.dial(remote)?;
+
+    loop {
+        match swarm.select_next_some().await {
+            SwarmEvent::NewListenAddr { address, .. } => println!("Listening on {address:?}"),
+            // Prints peer id identify info is being sent to.
+            SwarmEvent::Behaviour(identify::Event::Sent { peer_id, .. }) => {
+                tracing::debug!("Sent identify info to {peer_id:?}");
+            }
+            // Prints out the info received via the identify event
+            SwarmEvent::Behaviour(identify::Event::Received { info, .. }) => {
+                tracing::debug!("Received {info:?}");
+            }
+            _ => {}
+        }
+    }
 }
