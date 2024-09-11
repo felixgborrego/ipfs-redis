@@ -20,6 +20,3 @@ While using IPFS is a common practice for storing off-chain data, as seen in blo
 
 * **Built-in Support for Gossipsub PubSub:**  
   This enables data replication between master and slave nodes in Redis, allowing for decentralized replication without relying on traditional server-client architectures.
-
-
-
