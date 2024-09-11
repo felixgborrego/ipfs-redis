@@ -34,6 +34,8 @@ struct Args {
     port: Option<u16>,
     #[arg(long)]
     replicaof: Option<String>,
+    #[arg(long)]
+    remote_p2p_peer: Option<String>,
 }
 
 #[tokio::main]
@@ -50,6 +52,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing::debug!("args: {args:?}");
     let config = Config::config_from_args(&args);
+
+    ipfs::start_swam_loop(&args.remote_p2p_peer);
 
     tracing::info!("Redis server starting at {}!", config.port);
     let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port));
