@@ -10,6 +10,16 @@ readme = "README.md"
 keywords = ["redis", "libp2p", "rust"]
 
 [dependencies]
+libp2p = { version = "0.54.1", features = [
+    "tokio",
+    "gossipsub",
+    "mdns",
+    "noise",
+    "macros",
+    "tcp",
+    "yamux",
+    "quic",
+] }
 tokio = { version = "1.40.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -17,9 +27,3 @@ derive_more = { version = "1.0.0", features = ["from", "display"] }
 clap = { version = "4.5.17", features = ["derive", "unicode"] }
 base64 = "0.22.1"
 uuid = { version = "1", features = ["v7"] }
-libp2p = { version = "0.54.1", features = [
-    "tokio",
-    "gossipsub",
-    "mdns",
-    "macros",
-] }
