@@ -1,5 +1,7 @@
 # IPFS Redis
 
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/felixgborrego/ipfs-redis?utm_source=badge)
+
 ## Overview
 
 **IPFS Redis** is an exploratory project where I'm building my own Redis implementation from scratch with support for peer-to-peer replication using IPFS (InterPlanetary File System).
