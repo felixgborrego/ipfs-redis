@@ -7,36 +7,13 @@ use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 
 use clap::Parser;
-use protocol::Data;
-use replication::{master, slave};
-use storage::{Config, Db};
+use ipfsredis::protocol::Data;
+use ipfsredis::rdb::Rdb;
+use ipfsredis::replication::{master, slave};
+use ipfsredis::storage::{Config, Db};
+use ipfsredis::{cmds, error, ipfs, Args};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
-
-mod cmds;
-mod error;
-mod ipfs;
-mod protocol;
-mod rdb;
-mod replication;
-mod storage;
-
-use rdb::Rdb;
-
-#[derive(Parser, Debug)]
-#[command(version, about, long_about=None)]
-struct Args {
-    #[arg(long)]
-    dir: Option<String>,
-    #[arg(long)]
-    dbfilename: Option<String>,
-    #[arg(long)]
-    port: Option<u16>,
-    #[arg(long)]
-    replicaof: Option<String>,
-    #[arg(long)]
-    remote_p2p_peer: Option<String>,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
